@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Storiva</title>
+  <style>
+    :root { --primary:#6a11cb; --secondary:#2575fc; }
+    * { box-sizing:border-box; margin:0; padding:0; font-family:Arial,sans-serif; }
+    body { background:linear-gradient(to right,var(--primary),var(--secondary)); color:#333; }
+
+    .container{
+      max-width:1200px;margin:auto;padding:3rem 2rem;background:#fff;
+      border-radius:16px;box-shadow:0 12px 28px rgba(0,0,0,.15);margin-top:3rem;
+    }
+    h1{ text-align:center;font-size:2.6rem;color:var(--primary);margin-bottom:1.5rem; }
+
+    .toolbar{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;}
+    .toolbar input,.toolbar select{
+      flex:1 1 240px;padding:.7rem 1rem;border-radius:8px;border:2px solid #bbb;font-size:1rem;
+    }
+    .toolbar button{
+      background:var(--secondary);color:#fff;border:none;padding:.7rem 1.5rem;
+      border-radius:30px;font-size:1rem;cursor:pointer;
+    }
+    .toolbar button:hover{transform:translateY(-2px);box-shadow:0 8px 16px rgba(0,0,0,.15);}
+
+    #stories{display:grid;gap:1.5rem;}
+    .story{
+      border:3px solid var(--primary);border-left-width:8px;border-radius:12px;
+      padding:1.2rem 1.5rem;background:#fafafa;display:flex;gap:1rem;
+    }
+    .story img{width:140px;border-radius:8px;object-fit:cover;}
+    .story-content{flex:1;}
+    .story h3{margin-bottom:.3rem;color:var(--primary);}
+    .star{font-size:1.4rem;cursor:pointer;color:#ccc;user-select:none;}
+    .star.selected{color:gold;}
+
+    .read-controls button{
+      margin-top:.5rem;padding:.4rem 1rem;margin-right:.5rem;
+      background:var(--primary);color:#fff;border:none;border-radius:24px;font-size:.9rem;cursor:pointer;
+    }
+
+    .banner-after-story{margin:1rem auto 2rem;text-align:center;}
+    .banner-after-story img{
+      width:200px;height:auto;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.2);
+    }
+
+    #modal,#adminPanel{
+      display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
+      justify-content:center;align-items:center;z-index:50;
+    }
+    .modal-box{
+      background:#fff;padding:2rem;border-radius:12px;width:90%;
+      max-width:480px;max-height:90vh;overflow-y:auto;
+    }
+    .modal-box h3{color:var(--primary);margin-bottom:1rem;}
+    .modal-box input,.modal-box select,.modal-box textarea{
+      width:100%;padding:.7rem 1rem;margin-bottom:1rem;border-radius:8px;border:2px solid #ccc;font-size:1rem;
+    }
+    .modal-box textarea{resize:vertical;}
+    .modal-box button{
+      padding:.6rem 1.2rem;border:none;border-radius:24px;font-size:1rem;margin-right:.5rem;cursor:pointer;
+    }
+    .save-btn{background:var(--secondary);color:#fff;}
+    .cancel-btn{background:#999;color:#fff;}
+    .del-btn{background:#e63946;color:#fff;}
+
+    .admin-item{
+      display:flex;justify-content:space-between;align-items:center;
+      padding:.4rem 0;border-bottom:1px solid #eee;
+    }
+    .admin-item span.action{cursor:pointer;margin-left:.6rem;font-size:1.2rem;}
+    .admin-item .edit{color:#1d3557;}
+    .admin-item .delete{color:#e63946;}
+  </style>
+</head>
+<body>
+
+<!-- ===== Login Modal ===== -->
+<div id="modal">
+  <div class="modal-box">
+    <h3>Enter Admin Password</h3>
+    <input type="password" id="pwd" placeholder="Password">
+    <button class="save-btn" onclick="login()">Submit</button>
+    <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ===== Admin Panel ===== -->
+<div id="adminPanel">
+  <div class="modal-box">
+    <h3>Add / Update Story</h3>
+    <input type="hidden" id="editIndex">
+    <input id="title" placeholder="Story title">
+    <select id="category">
+      <option>Horror</option><option>Inspirational</option><option>For Child</option>
+      <option>Moral</option><option>Kings</option><option>Autobiography</option>
+    </select>
+    <textarea id="content" rows="5" placeholder="Write your story…"></textarea>
+    <input type="file" id="imgFile">
+    <button class="save-btn" onclick="saveStory()">Save</button>
+    <button class="cancel-btn" onclick="closeAdmin()">Close</button>
+
+    <hr style="margin:1.2rem 0">
+    <h3>Existing Stories</h3>
+    <div id="adminList"></div>
+
+    <hr style="margin:1.2rem 0">
+    <h3>Advertising Banners</h3>
+    <input type="file" id="leftBanner"><br><br>
+    <input type="file" id="rightBanner"><br><br>
+    <button class="save-btn" onclick="saveBanners()">Save Banners</button>
+    <button class="del-btn"  onclick="removeBanners()">Remove Banners</button>
+  </div>
+</div>
+
+<!-- ===== Main UI ===== -->
+<div class="container">
+  <h1>Storiva</h1>
+  <div class="toolbar">
+    <input id="search" placeholder="Search stories…">
+    <select id="categoryFilter">
+      <option value="All">All Categories</option><option>Horror</option><option>Inspirational</option>
+      <option>For Child</option><option>Moral</option><option>Kings</option><option>Autobiography</option>
+    </select>
+    <select id="ratingFilter">
+      <option value="All">All Ratings</option><option value="5">★★★★★ only</option>
+      <option value="4">4★ & up</option><option value="3">3★ & up</option>
+      <option value="2">2★ & up</option><option value="1">1★ & up</option>
+    </select>
+    <button onclick="openLogin()">Customize</button>
+  </div>
+  <div id="stories"></div>
+</div>
+
+<script>
+/* ===== Constants & Helpers ===== */
+const PASS='hg80tl81';
+const LS_KEY='storiva_stories';
+const ADS_KEY='storiva_ads';
+const RATE_KEY='storiva_ratings';
+const $=id=>document.getElementById(id);
+const load=(k,d='[]')=>JSON.parse(localStorage.getItem(k)||d);
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+
+/* ===== Login ===== */
+function openLogin(){ $('modal').style.display='flex'; }
+function closeModal(){ $('modal').style.display='none'; $('pwd').value=''; }
+function login(){ $('pwd').value===PASS ? (closeModal(),openAdmin()) : alert('Incorrect password'); }
+
+/* ===== Admin helpers ===== */
+function openAdmin(){ $('adminPanel').style.display='flex'; renderAdminList(); resetForm(); }
+function closeAdmin(){ $('adminPanel').style.display='none'; }
+function resetForm(){ $('editIndex').value=''; $('title').value=''; $('content').value=''; $('imgFile').value=''; $('category').value='Horror'; }
+
+function renderAdminList(){
+  const list=load(LS_KEY), box=$('adminList'); box.innerHTML='';
+  if(!list.length){ box.innerHTML='<p>No stories yet.</p>'; return; }
+  list.forEach((s,i)=>{
+    const row=document.createElement('div'); row.className='admin-item';
+    row.innerHTML=`<span>${s.title}</span>
+                   <span><span class="action edit" onclick="editStory(${i})">✏️</span>
+                   <span class="action delete" onclick="deleteStory(${i})">🗑️</span></span>`;
+    box.appendChild(row);
+  });
+}
+function editStory(i){ const s=load(LS_KEY)[i]; $('editIndex').value=i; $('title').value=s.title; $('category').value=s.category; $('content').value=s.content; }
+function deleteStory(i){ if(!confirm('Delete this story?'))return; const list=load(LS_KEY); list.splice(i,1); save(LS_KEY,list); renderStories(); renderAdminList(); }
+function saveStory(){
+  const title=$('title').value.trim(), content=$('content').value.trim(), category=$('category').value;
+  if(!title||!content){ alert('Title & content required'); return; }
+  const idx=$('editIndex').value, list=load(LS_KEY); const file=$('imgFile').files[0];
+  const finish=img=>{ const obj={title,category,content,img}; idx===''?list.push(obj):list[idx]=obj; save(LS_KEY,list); renderStories(); renderAdminList(); resetForm(); };
+  if(file){ const fr=new FileReader(); fr.onload=()=>finish(fr.result); fr.readAsDataURL(file);} else finish(idx===''?'':list[idx].img);
+}
+
+/* ===== Banner helpers ===== */
+function saveBanners(){
+  const ads=load(ADS_KEY,'{}'), L=$('leftBanner').files[0], R=$('rightBanner').files[0];
+  const done=()=>{ save(ADS_KEY,ads); alert('Banners saved'); };
+  const read=(f,pos,next)=>{ if(!f){next();return;} const fr=new FileReader(); fr.onload=()=>{ads[pos]=fr.result; next();}; fr.readAsDataURL(f); };
+  read(L,'left',()=>read(R,'right',done));
+}
+function removeBanners(){ if(!confirm('Remove both banners?'))return; localStorage.removeItem(ADS_KEY); alert('Banners removed.'); }
+const loadBanners=()=>load(ADS_KEY,'{}');
+const getRandomBanner=()=>{ const arr=Object.values(loadBanners()).filter(Boolean); return arr.length?arr[Math.floor(Math.random()*arr.length)]:''; };
+
+/* ===== Ratings ===== */
+const rating=t=>load(RATE_KEY,'{}')[t]||0;
+function setRating(t,v){ const r=load(RATE_KEY,'{}'); r[t]=v; save(RATE_KEY,r); renderStories(); }
+function starBox(title){
+  const box=document.createElement('div'); box.className='stars'; const cur=rating(title);
+  for(let i=1;i<=5;i++){ const s=document.createElement('span'); s.textContent='★'; s.className='star'+(i<=cur?' selected':''); s.onclick=()=>setRating(title,i); box.appendChild(s);} return box;
+}
+
+/* ===== Speech helpers ===== */
+let speechUtterance;
+function speakText(title,content){ if(window.speechSynthesis.speaking) window.speechSynthesis.cancel(); speechUtterance=new SpeechSynthesisUtterance(title+'. '+content); speechUtterance.lang='en-IN'; window.speechSynthesis.speak(speechUtterance); }
+function pauseSpeech(){ if(window.speechSynthesis.speaking) window.speechSynthesis.pause(); }
+function stopSpeech(){ window.speechSynthesis.cancel(); }
+
+/* ===== Render stories ===== */
+function renderStories(){
+  const list=load(LS_KEY), wrap=$('stories'); wrap.innerHTML='';
+  const term=$('search').value.toLowerCase(), cat=$('categoryFilter').value, min=$('ratingFilter').value;
+  list.filter(s=>{ const r=rating(s.title); return (cat==='All'||s.category===cat)&&(min==='All'||r>=+min)&&(s.title.toLowerCase().includes(term)||s.content.toLowerCase().includes(term)); })
+      .forEach(s=>{
+        const card=document.createElement('div'); card.className='story';
+        if(s.img){ const img=document.createElement('img'); img.src=s.img; card.appendChild(img); }
+        const contentDiv=document.createElement('div'); contentDiv.className='story-content';
+        contentDiv.innerHTML=`<h3>${s.title}</h3><p><em>${s.category}</em></p><p>${s.content}</p>`;
+        contentDiv.appendChild(starBox(s.title));
+
+        /* create controls via JS to avoid attribute‑quote issues */
+        const controls=document.createElement('div'); controls.className='read-controls';
+        const btnRead  =document.createElement('button'); btnRead.textContent='🔊 Read';  btnRead.onclick = ()=>speakText(s.title,s.content);
+        const btnPause =document.createElement('button'); btnPause.textContent='⏸ Pause'; btnPause.onclick= pauseSpeech;
+        const btnStop  =document.createElement('button'); btnStop.textContent ='⏹ Stop';  btnStop.onclick = stopSpeech;
+        controls.append(btnRead,btnPause,btnStop);
+        contentDiv.appendChild(controls);
+
+        card.appendChild(contentDiv); wrap.appendChild(card);
+
+        const bannerSrc=getRandomBanner();
+        if(bannerSrc){ const b=document.createElement('div'); b.className='banner-after-story'; b.innerHTML=`<img src="${bannerSrc}" alt="Ad">`; wrap.appendChild(b); }
+      });
+}
+
+/* ===== Event bindings & init ===== */
+$('search').oninput=renderStories;
+$('categoryFilter').onchange=renderStories;
+$('ratingFilter').onchange=renderStories;
+window.onload=renderStories;
+</script>
+</body>
+</html>
